@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Alert } from "react-native";
 import styled from "styled-components/native";
 import colors from "../colors";
+import { useDB } from "../context";
 
 const View = styled.View`
   background-color: ${colors.bgColor};
@@ -56,13 +57,22 @@ const EmotionText = styled.Text`
 
 const emotions = ["🤯", "🥲", "🤬", "🥰", "😊", "🤩"];
 
-const Write = () => {
+const Write = ({ navigation: { goBack } }) => {
+  const realm = useDB();
   const [selectedEmotion, setSelectedEmotion] = useState(null);
   const [input, setInput] = useState("");
   const onSubmit = () => {
     if (input === "" || selectedEmotion === null) {
       return Alert.alert("Please complete the form");
     }
+    realm.write(() => {
+      const diary = realm.create("Diary", {
+        _id: Date.now(),
+        emotion: selectedEmotion,
+        message: input,
+      });
+      goBack();
+    });
   };
   return (
     <View>

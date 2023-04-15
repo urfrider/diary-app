@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import Realm from "realm";
 import { View } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
+import { DBContext } from "./context";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -20,14 +21,15 @@ const DiarySchema = {
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const [realm, setRealm] = useState(null);
 
   async function prepare() {
     try {
-      const realm = await Realm.open({
+      const connection = await Realm.open({
         path: "diaryDB",
         schema: [DiarySchema],
       });
-      console.log(realm);
+      setRealm(connection);
     } catch (e) {
       console.warn(e);
     } finally {
@@ -52,10 +54,12 @@ export default function App() {
   }
 
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <NavigationContainer>
-        <Navigator />
-      </NavigationContainer>
-    </View>
+    <DBContext.Provider value={realm}>
+      <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+        <NavigationContainer>
+          <Navigator />
+        </NavigationContainer>
+      </View>
+    </DBContext.Provider>
   );
 }

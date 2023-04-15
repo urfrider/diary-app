@@ -1,7 +1,15 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components/native";
 import colors from "../colors";
 import { Ionicons } from "@expo/vector-icons";
+import { useDB } from "../context";
+import {
+  FlatList,
+  TouchableOpacity,
+  LayoutAnimation,
+  UIManager,
+  Platform,
+} from "react-native";
 
 const SafeView = styled.SafeAreaView`
   flex: 1;
@@ -31,16 +39,75 @@ const Btn = styled.TouchableOpacity`
   elevation: 10;
   box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
 `;
+const Record = styled.View`
+  background-color: ${colors.cardColor};
+  flex-direction: row;
+  align-items: center;
+  padding: 10px 20px;
+  border-radius: 10px;
+`;
+const Emotion = styled.Text`
+  font-size: 24px;
+  margin-right: 10px;
+`;
+const Message = styled.Text`
+  font-size: 18px;
+  font-weight: 400;
+`;
+const Separator = styled.View`
+  height: 10px;
+`;
 
-const Home = ({ navigation: { navigate } }) => (
-  <SafeView>
-    <View>
-      <Title>My Diary</Title>
-      <Btn onPress={() => navigate("Write")}>
-        <Ionicons name="add" color="white" size={40} />
-      </Btn>
-    </View>
-  </SafeView>
-);
+if (Platform.OS === "android") {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
+
+const Home = ({ navigation: { navigate } }) => {
+  const realm = useDB();
+  const [emotions, setEmotions] = useState([]);
+  useEffect(() => {
+    const emotions = realm.objects("Diary");
+    emotions.addListener((emotions, changes) => {
+      LayoutAnimation.spring();
+      setEmotions(emotions.sorted("_id"));
+    });
+    return () => {
+      emotions.removeAllListeners();
+    };
+  }, []);
+
+  const onDelete = (id) => {
+    realm.write(() => {
+      const emotion = realm.objectForPrimaryKey("Diary", id);
+      realm.delete(emotion);
+    });
+  };
+  return (
+    <SafeView>
+      <View>
+        <Title>My Diary</Title>
+        <FlatList
+          data={emotions.map((emotion) => emotion)}
+          contentContainerStyle={{ paddingVertical: 10 }}
+          keyExtractor={(emotion) => emotion._id + ""}
+          ItemSeparatorComponent={Separator}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => onDelete(item._id)}>
+              <Record>
+                <Emotion>{item.emotion}</Emotion>
+                <Message>{item.message}</Message>
+              </Record>
+            </TouchableOpacity>
+          )}
+        />
+        <Btn onPress={() => navigate("Write")}>
+          <Ionicons name="add" color="white" size={40} />
+        </Btn>
+      </View>
+    </SafeView>
+  );
+};
 
 export default Home;
